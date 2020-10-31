@@ -12,14 +12,14 @@ const PanWrapper = ({ children, changeOffset }) => {
       // console.log("dlt");
       changeOffset?.(prevValue - value);
       console.log("value", prevValue - value);
-      if (value >= 250 || value <= 0) {
-        scrollViewRef.current.scrollTo({
-          x: 0,
-          y: value - scrollPrev,
-          animated: true,
-        });
-        scrollPrev = value - prevValue;
-      }
+      // if (value >= 250 || value <= 0) {
+      //   scrollViewRef.current.scrollTo({
+      //     x: 0,
+      //     y: value - scrollPrev,
+      //     animated: true,
+      //   });
+      //   scrollPrev = value - prevValue;
+      // }
       prevValue = value;
     });
   }, []);

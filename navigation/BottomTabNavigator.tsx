@@ -12,6 +12,13 @@ import {
 
 import { BottomTabParamList } from "../types";
 
+// import {
+//   TransformProvider,
+//   TransformConsumer,
+//   HeaderWrapper,
+//   ScrollWrapper,
+// } from "@beloboka/rn-animated";
+
 import {
   TransformProvider,
   TransformConsumer,
@@ -100,27 +107,32 @@ const NavTabScreen = (options: any) => <ResponsiveScroll {...options} />;
 const ResponsiveScroll = (props: any) => {
   const data = React.useMemo(() => generateItems(25), []);
   return (
-    <PanWrapper>
-      <ScrollWrapper>
-        {({
-          onChangeFocus,
-          handleOnScroll,
-          maxHeight,
-          minHeight,
-          interpolatedValue,
-          headerOffset,
-          scroll,
-          diffClampScroll,
-          padding,
-        }: any) => {
-          return (
+    <ScrollWrapper>
+      {({
+        onChangeFocus,
+        handleOnScroll,
+        maxHeight,
+        minHeight,
+        interpolatedValue,
+        headerOffset,
+        scroll,
+        diffClampScroll,
+        padding,
+      }: any) => {
+        return (
+          <ScrollView
+            style={[
+              styles.fill,
+              {
+                ...props.style,
+              },
+            ]}
+            onScroll={(event) => {
+              handleOnScroll(event);
+            }}
+          >
             <Animated.View
               style={{
-                // marginTop: interpolatedValue,
-                // marginBottom: interpolatedValue.interpolate({
-                //   inputRange: [-maxHeight, minHeight],
-                //   outputRange: [minHeight, -maxHeight * 10],
-                // }),
                 transform: [
                   {
                     translateY: interpolatedValue.interpolate({
@@ -148,10 +160,10 @@ const ResponsiveScroll = (props: any) => {
                 );
               })}
             </Animated.View>
-          );
-        }}
-      </ScrollWrapper>
-    </PanWrapper>
+          </ScrollView>
+        );
+      }}
+    </ScrollWrapper>
   );
 };
 
@@ -183,7 +195,7 @@ export default function BottomTabNavigator() {
             {(options) => <NavTabScreen tabName="TabTwo" {...options} />}
           </BottomTab.Screen>
         </BottomTab.Navigator>
-        {/* <Header /> */}
+        <Header />
       </View>
     </TransformProvider>
   );
