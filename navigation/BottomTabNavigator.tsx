@@ -183,7 +183,7 @@ export default function BottomTabNavigator() {
             {(options) => <NavTabScreen tabName="TabTwo" {...options} />}
           </BottomTab.Screen>
         </BottomTab.Navigator>
-        {/* <Header /> */}
+        <Header />
       </View>
     </TransformProvider>
   );

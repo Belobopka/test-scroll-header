@@ -16,12 +16,13 @@ export type DiffClampType = WithInnerValue<Animated.AnimatedDiffClamp>;
 export type AnimatedScroll = WithInnerValue<Animated.Value>;
 
 export type ContextValue = {
-  interpolatedValue: Animated.AnimatedInterpolation | null;
+  interpolatedValue: Animated.AnimatedInterpolation;
   minHeight: number;
   maxHeight: number;
   headerOffset: Animated.Value;
   preserveHeader?: boolean;
-  changeOffset: (item: AnimatedScroll) => void;
+  changeOffset: (item: number) => void;
+  diffClampScroll: Animated.AnimatedDiffClamp;
   // onChangeFocusScroll: (
   //   item: DiffClampType,
   //   animatedScrollValue: AnimatedScroll
@@ -29,7 +30,8 @@ export type ContextValue = {
 };
 
 export const TransformContext = React.createContext<ContextValue>({
-  interpolatedValue: null,
+  interpolatedValue: new Animated.Value(0),
+  diffClampScroll: new Animated.Value(0),
   //  onChangeFocusScroll: () => {},
   minHeight: 0,
   maxHeight: 250,
@@ -42,65 +44,12 @@ const TransformProvider: FC<TransformProviderProps> = ({
   maxHeight,
   minHeight,
   transformDuration = 300,
-  preserveHeader = false,
 }: TransformProviderProps) => {
   const [headerOffset] = React.useState(new Animated.Value(0));
   const [testHeaderOffset] = React.useState(new Animated.Value(0));
   const [diffClampScroll, changeDiffClampScroll] = React.useState(
     Animated.diffClamp(headerOffset, minHeight, maxHeight)
   );
-
-  // TODO onChangeDiffClamp;
-  // const onChangeFocusScroll = React.useCallback(
-  //   (
-  //     item: Animated.AnimatedDiffClamp & {
-  //       _value: number;
-  //     },
-  //     animatedScrollValue: Animated.Value & {
-  //       _value: number;
-  //     }
-  //   ) => {
-  //     animatedScrollValue.removeAllListeners();
-
-  //     changeDiffClampScroll(
-  //       Animated.diffClamp(headerOffset, minHeight, maxHeight)
-  //     );
-
-  //     const diffAnimated = new Animated.Value(item._value);
-  //     let diff: number = animatedScrollValue._value;
-  //     const offsetVal = item._value;
-  //     const diffClamp = Animated.diffClamp(diffAnimated, minHeight, maxHeight);
-
-  //     animatedScrollValue.addListener(({ value: scrollOffset }: any) => {
-  //       let innerVal: number;
-  //       if (scrollOffset - diff + offsetVal < 0) {
-  //         innerVal = 0;
-  //       } else {
-  //         innerVal = scrollOffset - diff + offsetVal;
-  //       }
-
-  //       diffAnimated.setValue(innerVal);
-
-  //       Animated.timing(headerOffset, {
-  //         toValue: diffClamp,
-  //         duration: 0,
-  //         useNativeDriver: false,
-  //       }).start();
-  //     });
-
-  //     Animated.timing(headerOffset, {
-  //       toValue: item._value,
-  //       duration: transformDuration,
-  //       useNativeDriver: false,
-  //     }).start(({ finished }) => {
-  //       if (finished) {
-  //         changeDiffClampScroll(item);
-  //       }
-  //     });
-  //   },
-  //   []
-  // );
-
   const interpolate = React.useMemo(
     () =>
       diffClampScroll.interpolate({
@@ -111,12 +60,7 @@ const TransformProvider: FC<TransformProviderProps> = ({
   );
 
   const changeOffset = React.useCallback((item) => {
-    // const { _value } = headerOffset as AnimatedScroll;
-    // const animation = new Animated.Value(item._value + headerOffset._value);
-    // console.log("_value", _value);
-    const addition = Animated.add(item, testHeaderOffset);
-    // const val = new Animated.Value(addition);
-    // console.log(interpolate);
+    // console.log("headerOffset", item + headerOffset._value);
     Animated.timing(headerOffset, {
       toValue: item + headerOffset._value,
       duration: 0,
