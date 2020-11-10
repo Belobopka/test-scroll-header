@@ -19,6 +19,9 @@ import {
   ScrollWrapper,
 } from "../lib";
 import { PanWrapper } from "../lib/Pan";
+import { PanGestureHandler } from "react-native-gesture-handler";
+
+type Partia = Partial<any>;
 
 const HEADER_HEIGHT = 250;
 
@@ -27,33 +30,43 @@ const routes = {
   tabTwo: "TabTwo",
 };
 
-const Header = () => (
-  <HeaderWrapper>
-    {({
-      interpolatedValue,
-      maxHeight,
-      panResponder,
-    }: {
-      interpolatedValue: Animated.AnimatedInterpolation;
-      maxHeight: number;
-    }) => (
-      <Animated.View
-        {...panResponder.panHandlers}
-        style={[
-          styles.header,
-          {
-            transform: [{ translateY: interpolatedValue }],
-            top: 0,
-            backgroundColor: "orange",
-          },
-        ]}
-      >
-        <View style={[styles.bar, { height: maxHeight }]}>
-          <Text style={styles.title}>Title</Text>
-        </View>
-      </Animated.View>
-    )}
-  </HeaderWrapper>
+const Header = TransformConsumer(
+  ({
+    interpolatedValue,
+    maxHeight,
+    minHeight,
+  }: {
+    interpolatedValue: Animated.AnimatedInterpolation;
+    maxHeight: number;
+    minHeight: number;
+  }) => {
+    return (
+      <PanWrapper>
+        {(panProps: any) => (
+          <PanGestureHandler {...panProps}>
+            <Animated.View
+              style={[
+                styles.header,
+                {
+                  transform: [
+                    {
+                      translateY: interpolatedValue,
+                    },
+                  ],
+                  top: 0,
+                  backgroundColor: "orange",
+                },
+              ]}
+            >
+              <View style={[styles.bar, { height: maxHeight }]}>
+                <Text style={styles.title}>Title</Text>
+              </View>
+            </Animated.View>
+          </PanGestureHandler>
+        )}
+      </PanWrapper>
+    );
+  }
 );
 
 const TabBar = TransformConsumer(
@@ -69,7 +82,6 @@ const TabBar = TransformConsumer(
         navigation.navigate(routeName);
       }
     };
-    // console.log(maxHeight);
     return (
       <Animated.View
         style={[
@@ -100,27 +112,13 @@ const NavTabScreen = (options: any) => <ResponsiveScroll {...options} />;
 const ResponsiveScroll = (props: any) => {
   const data = React.useMemo(() => generateItems(25), []);
   return (
-    <PanWrapper>
+    <PanWrapper withScroll>
       <ScrollWrapper>
-        {({
-          onChangeFocus,
-          handleOnScroll,
-          maxHeight,
-          minHeight,
-          interpolatedValue,
-          headerOffset,
-          scroll,
-          diffClampScroll,
-          padding,
-        }: any) => {
+        {({ maxHeight, minHeight, interpolatedValue }: any) => {
           return (
             <Animated.View
               style={{
-                // marginTop: interpolatedValue,
-                // marginBottom: interpolatedValue.interpolate({
-                //   inputRange: [-maxHeight, minHeight],
-                //   outputRange: [minHeight, -maxHeight * 10],
-                // }),
+                minHeight: Dimensions.get("screen").height - maxHeight,
                 transform: [
                   {
                     translateY: interpolatedValue.interpolate({
@@ -157,24 +155,10 @@ const ResponsiveScroll = (props: any) => {
 
 const BottomTab = createMaterialTopTabNavigator<BottomTabParamList>();
 
-const StubView = TransformConsumer(({ interpolatedValue, maxHeight }) => (
-  <Animated.View
-    style={{
-      flex: interpolatedValue,
-      // transform: [{ translateY: interpolatedValue }],
-    }}
-  >
-    <View
-      style={{ width: 100, backgroundColor: "green", height: maxHeight }}
-    ></View>
-  </Animated.View>
-));
-
 export default function BottomTabNavigator() {
   return (
     <TransformProvider minHeight={0} maxHeight={HEADER_HEIGHT}>
       <View style={{ flex: 1 }}>
-        {/* <StubView /> */}
         <BottomTab.Navigator tabBar={TabBar}>
           <BottomTab.Screen name="TabOne">
             {(options) => <NavTabScreen tabName="TabOne" {...options} />}

@@ -1,115 +1,131 @@
 import React, { FC } from "react";
+import { RefObject } from "react";
+import { Dimensions } from "react-native";
 import { View, PanResponder, Animated, ScrollView } from "react-native";
-import { PanGestureHandler, State } from "react-native-gesture-handler";
+import {
+  PanGestureHandler,
+  PanGestureHandlerGestureEvent,
+  PanGestureHandlerStateChangeEvent,
+  State,
+} from "react-native-gesture-handler";
 import { TransformConsumer } from "..";
 
-import { ContextValue } from "../TransformProvider";
+import {
+  AnimatedValue,
+  ContextValue,
+  DiffClampType,
+} from "../TransformProvider";
 
 const offset = 2;
 
-const PanWrapper: FC<ContextValue> = ({
+const PanWrapper: FC<
+  ContextValue & {
+    withScroll?: boolean;
+    style?: any;
+  }
+> = ({
   children,
   changeOffset,
   minHeight,
   maxHeight,
-  interpolatedValue,
   diffClampScroll,
-  headerOffset,
+  withScroll = false,
+  style = {},
 }) => {
   const [scroll] = React.useState(new Animated.Value(0));
   const [prevValue] = React.useState(new Animated.Value(0));
-  const [scrollVal] = React.useState(new Animated.Value(0));
 
   const [decay] = React.useState(new Animated.Value(0));
-  // React.useEffect(() => {
-  //   scroll.addListener(({ value }) => {
-  //     let diff = prevValue._value - value;
-  //     console.log("diffClampScroll", diffClampScroll);
-  //     changeOffset?.(diff);
-  //     if (
-  //       diffClampScroll._value >= maxHeight - offset ||
-  //       diffClampScroll._value <= minHeight + offset
-  //     ) {
-  //       scrollViewRef.current.scrollTo({
-  //         x: 0,
-  //         y: scrollVal._value,
-  //         animated: true,
-  //       });
-  //       scrollVal.setValue(scrollVal._value + diff);
-  //     }
-  //     prevValue.setValue(value);
-  //   });
-  // }, []);
+  const [scrollHeight, changeScrollHeight] = React.useState(0);
 
-  const scrollViewRef = React.useRef();
+  const scrollViewRef = React.useRef<ScrollView>() as RefObject<ScrollView>;
 
-  decay.addListener(({ value }) => {
-    console.log("decay", value);
-    return scrollViewRef.current.scrollTo({
-      x: 0,
-      y: value,
-      animated: true,
+  const [decayDiff] = React.useState(new Animated.Value(0));
+
+  React.useEffect(() => {
+    let decayPrev = 0;
+    decay.addListener(({ value }) => {
+      const testDiffVal =
+        (decayDiff as AnimatedValue)._value + value - decayPrev;
+      scrollViewRef?.current?.scrollTo?.({
+        x: 0,
+        y: testDiffVal,
+        animated: true,
+      });
+      decayDiff.setValue(
+        testDiffVal >= scrollHeight
+          ? scrollHeight
+          : testDiffVal <= 0
+          ? 0
+          : testDiffVal
+      );
+      decayPrev = value;
     });
-  });
+    return () => decay.removeAllListeners();
+  }, [decay, decayDiff, scrollViewRef, scrollHeight]);
 
-  // TODO add limiter for decay, change _value access to native drivers true only
-  const _onPanGestureEvent = ({ nativeEvent }) => {
-    console.log(nativeEvent);
-    const value = nativeEvent.translationY;
-    const { velocityY } = nativeEvent;
-    console.log(velocityY);
-    let diff = prevValue._value - value;
-    console.log("diffClampScroll", diffClampScroll);
-    changeOffset?.(diff);
-    if (
-      (velocityY <= 0 && diffClampScroll._value >= 230) ||
-      (velocityY >= 0 && diffClampScroll._value <= 20)
-    ) {
-      // scrollViewRef.current.scrollTo({
-      //   x: 0,
-      //   y: scrollVal._value,
-      //   animated: true,
-      // });
-      // decay.setValue(scrollVal._value);
-      Animated.decay(decay, {
-        velocity: -nativeEvent.velocityY / 1000,
-        deceleration: 0.997,
-        useNativeDriver: false,
-      }).start();
-      // scrollVal.setValue(scrollVal._value + diff);
-    }
-    prevValue.setValue(value);
-    // return Animated.event([{ nativeEvent: { translationY: scroll } }], {
-    //   useNativeDriver: false,
-    // })(event);
-  };
+  const _onPanGestureEvent = React.useCallback(
+    ({ nativeEvent }: PanGestureHandlerGestureEvent) => {
+      const value = nativeEvent.translationY;
+      const { velocityY } = nativeEvent;
+      const diff = (prevValue as AnimatedValue)._value - value;
+      const diffClampScrollValue = (diffClampScroll as AnimatedValue)._value;
+      changeOffset?.(diff);
+      if (
+        withScroll &&
+        ((velocityY <= 0 && diffClampScrollValue >= maxHeight - offset) ||
+          (velocityY >= 0 && diffClampScrollValue <= minHeight + offset))
+      ) {
+        if (scrollHeight <= 0) {
+          return;
+        }
+        Animated.decay(decay, {
+          velocity: -nativeEvent.velocityY / 1000,
+          deceleration: 0.997,
+          useNativeDriver: false,
+        }).start();
+      }
+      prevValue.setValue(value);
+    },
+    [prevValue, diffClampScroll, decay, scrollHeight]
+  );
 
-  const handlePanStateChange = ({ nativeEvent }) => {
-    console.log(nativeEvent.state);
-    if (nativeEvent.state === 5) {
-      // decay.setValue(nativeEvent.translationY);
-      // Animated.decay(decay, {
-      //   velocity: -nativeEvent.velocityY / 10000,
-      //   deceleration: 0.997,
-      //   useNativeDriver: false,
-      // }).start();
-      prevValue.setValue(0);
-      scroll.setValue(0);
-    }
-  };
+  const handlePanStateChange = React.useCallback(
+    ({ nativeEvent }: PanGestureHandlerStateChangeEvent) => {
+      if (nativeEvent.state === 5) {
+        prevValue.setValue(0);
+        scroll.setValue(0);
+      }
+    },
+    [prevValue, scroll]
+  );
 
-  // const _onPanGestureEvent = (event) => console.log(event.nativeEvent);
+  const onContentSizeChange = React.useCallback(
+    (_, height) => {
+      if (!scrollHeight || scrollHeight !== height) {
+        changeScrollHeight(height - Dimensions.get("screen").height);
+      }
+    },
+    [scrollHeight]
+  );
 
-  return (
+  return withScroll ? (
     <PanGestureHandler
       onHandlerStateChange={handlePanStateChange}
-      // failOffsetY={-100}
-      // minDist={100}
       activeOffsetY={[-5, 5]}
       onGestureEvent={_onPanGestureEvent}
     >
-      <ScrollView ref={scrollViewRef}>{children}</ScrollView>
+      <ScrollView onContentSizeChange={onContentSizeChange} ref={scrollViewRef}>
+        {children}
+      </ScrollView>
     </PanGestureHandler>
+  ) : (
+    typeof children === "function" &&
+      children({
+        onGestureEvent: _onPanGestureEvent,
+        handlePanStateChange,
+        onContentSizeChange,
+      })
   );
 };
 

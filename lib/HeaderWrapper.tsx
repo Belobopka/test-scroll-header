@@ -19,7 +19,6 @@ const HeaderWrapper: FC<WrapperProps> = ({
   React.useEffect(() => {
     let prevValue = scroll._value;
     scroll.addListener(({ value }) => {
-      // console.log((prevValue - value) / 2);
       changeOffset?.((prevValue - value) / 2);
       prevValue = value;
     });
