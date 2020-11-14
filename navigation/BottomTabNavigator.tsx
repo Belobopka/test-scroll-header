@@ -42,8 +42,11 @@ const Header = TransformConsumer(
   }) => {
     return (
       <PanWrapper>
-        {(panProps: any) => (
-          <PanGestureHandler {...panProps}>
+        {({ onGestureEvent, handlePanStateChange }) => (
+          <PanGestureHandler
+            onGestureEvent={onGestureEvent}
+            onHandlerStateChange={handlePanStateChange}
+          >
             <Animated.View
               style={[
                 styles.header,

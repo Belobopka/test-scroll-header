@@ -30,10 +30,12 @@ const PanWrapper: FC<
   maxHeight,
   diffClampScroll,
   withScroll = false,
+  prevValue,
+  changePrevValue,
   style = {},
 }) => {
   const [scroll] = React.useState(new Animated.Value(0));
-  const [prevValue] = React.useState(new Animated.Value(0));
+  // const [prevValue] = React.useState(new Animated.Value(0));
 
   const [decay] = React.useState(new Animated.Value(0));
   const [scrollHeight, changeScrollHeight] = React.useState(0);
@@ -70,6 +72,7 @@ const PanWrapper: FC<
       const { velocityY } = nativeEvent;
       const diff = (prevValue as AnimatedValue)._value - value;
       const diffClampScrollValue = (diffClampScroll as AnimatedValue)._value;
+      console.log("value", value);
       changeOffset?.(diff);
       if (
         withScroll &&
@@ -85,7 +88,8 @@ const PanWrapper: FC<
           useNativeDriver: false,
         }).start();
       }
-      prevValue.setValue(value);
+      changePrevValue(value);
+      // prevValue.setValue(value);
     },
     [prevValue, diffClampScroll, decay, scrollHeight]
   );
@@ -93,7 +97,8 @@ const PanWrapper: FC<
   const handlePanStateChange = React.useCallback(
     ({ nativeEvent }: PanGestureHandlerStateChangeEvent) => {
       if (nativeEvent.state === 5) {
-        prevValue.setValue(0);
+        changePrevValue(0);
+        // prevValue.setValue(0);
         scroll.setValue(0);
       }
     },
@@ -123,7 +128,7 @@ const PanWrapper: FC<
     typeof children === "function" &&
       children({
         onGestureEvent: _onPanGestureEvent,
-        handlePanStateChange,
+        onHandlerStateChange: handlePanStateChange,
         onContentSizeChange,
       })
   );

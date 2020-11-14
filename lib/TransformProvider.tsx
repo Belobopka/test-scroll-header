@@ -23,6 +23,8 @@ export type ContextValue = {
   preserveHeader?: boolean;
   changeOffset: (item: number) => void;
   diffClampScroll: Animated.AnimatedDiffClamp;
+  prevValue: Animated.Value;
+  changePrevValue: (value: number) => void;
 };
 
 export const TransformContext = React.createContext<ContextValue>({
@@ -32,6 +34,8 @@ export const TransformContext = React.createContext<ContextValue>({
   maxHeight: 250,
   headerOffset: new Animated.Value(0),
   changeOffset: () => {},
+  prevValue: new Animated.Value(0),
+  changePrevValue: () => {},
 });
 
 const TransformProvider: FC<TransformProviderProps> = ({
@@ -52,6 +56,8 @@ const TransformProvider: FC<TransformProviderProps> = ({
     [diffClampScroll]
   );
 
+  const [prevValue] = React.useState(new Animated.Value(0));
+
   const changeOffset = React.useCallback((item) => {
     Animated.timing(headerOffset, {
       toValue: item + (headerOffset as AnimatedValue)._value,
@@ -60,6 +66,11 @@ const TransformProvider: FC<TransformProviderProps> = ({
     }).start();
   }, []);
 
+  const changePrevValue = React.useCallback(
+    (value) => prevValue.setValue(value),
+    [prevValue]
+  );
+
   const value = {
     interpolatedValue: interpolate,
     diffClampScroll,
@@ -67,6 +78,8 @@ const TransformProvider: FC<TransformProviderProps> = ({
     maxHeight,
     headerOffset,
     changeOffset,
+    prevValue,
+    changePrevValue,
   };
   return (
     <TransformContext.Provider value={value}>
