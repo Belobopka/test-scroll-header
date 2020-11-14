@@ -1,79 +1,91 @@
 import React, { FC } from "react";
 import { RefObject } from "react";
-import { Dimensions } from "react-native";
-import { View, PanResponder, Animated, ScrollView } from "react-native";
+import { Dimensions, Text } from "react-native";
+import { View, Animated, ScrollView } from "react-native";
 import {
-  PanGestureHandler,
   PanGestureHandlerGestureEvent,
   PanGestureHandlerStateChangeEvent,
-  State,
 } from "react-native-gesture-handler";
-import { TransformConsumer } from "..";
+import TransformConsumer from "./TransformConsumer";
 
 import {
   AnimatedValue,
   ContextValue,
-  DiffClampType,
-} from "../TransformProvider";
+  InterpolatedValueType,
+} from "./TransformProvider";
 
 const offset = 2;
 
-const PanWrapper: FC<
-  ContextValue & {
-    withScroll?: boolean;
-    style?: any;
-  }
-> = ({
+export type PanWrapperChildrenProps = {
+  onGestureEvent: (value: PanGestureHandlerGestureEvent) => void;
+  onHandlerStateChange: (value: PanGestureHandlerStateChangeEvent) => void;
+  onContentSizeChange?: (_: any, height: number) => void;
+  interpolatedValue: InterpolatedValueType;
+  activeOffsetY?: [number, number];
+  maxHeight: number;
+  minHeight: number;
+  scrollRef?: RefObject<ScrollView>;
+};
+
+export type PanWrapperProps = ContextValue & {
+  withScroll?: boolean;
+  activeOffsetY: [number, number];
+  children: ({
+    onGestureEvent,
+    onHandlerStateChange,
+    onContentSizeChange,
+    interpolatedValue,
+    activeOffsetY,
+    scrollRef,
+  }: PanWrapperChildrenProps) => JSX.Element;
+};
+
+const PanWrapper: FC<PanWrapperProps> = ({
   children,
-  changeOffset,
+  setOffset,
   minHeight,
   maxHeight,
   diffClampScroll,
+  interpolatedValue,
   withScroll = false,
-  prevValue,
-  changePrevValue,
-  style = {},
-}) => {
+  pan,
+  flattenOffset,
+  setPanValue,
+  activeOffsetY,
+}: PanWrapperProps) => {
   const [scroll] = React.useState(new Animated.Value(0));
-  // const [prevValue] = React.useState(new Animated.Value(0));
-
   const [decay] = React.useState(new Animated.Value(0));
   const [scrollHeight, changeScrollHeight] = React.useState(0);
-
-  const scrollViewRef = React.useRef<ScrollView>() as RefObject<ScrollView>;
-
+  const scrollRef = React.useRef<ScrollView>() as RefObject<ScrollView>;
   const [decayDiff] = React.useState(new Animated.Value(0));
 
   React.useEffect(() => {
     let decayPrev = 0;
     decay.addListener(({ value }) => {
-      const testDiffVal =
+      const diffNumber =
         (decayDiff as AnimatedValue)._value + value - decayPrev;
-      scrollViewRef?.current?.scrollTo?.({
+      scrollRef?.current?.scrollTo?.({
         x: 0,
-        y: testDiffVal,
+        y: diffNumber,
         animated: true,
       });
       decayDiff.setValue(
-        testDiffVal >= scrollHeight
+        diffNumber >= scrollHeight
           ? scrollHeight
-          : testDiffVal <= 0
+          : diffNumber <= 0
           ? 0
-          : testDiffVal
+          : diffNumber
       );
       decayPrev = value;
     });
     return () => decay.removeAllListeners();
-  }, [decay, decayDiff, scrollViewRef, scrollHeight]);
+  }, [decay, decayDiff, scrollRef, scrollHeight]);
 
   const _onPanGestureEvent = React.useCallback(
     ({ nativeEvent }: PanGestureHandlerGestureEvent) => {
       const value = nativeEvent.translationY;
       const { velocityY } = nativeEvent;
-      const diff = (prevValue as AnimatedValue)._value - value;
       const diffClampScrollValue = (diffClampScroll as AnimatedValue)._value;
-      console.log("value", value);
-      changeOffset?.(diff);
       if (
         withScroll &&
         ((velocityY <= 0 && diffClampScrollValue >= maxHeight - offset) ||
@@ -88,21 +100,23 @@ const PanWrapper: FC<
           useNativeDriver: false,
         }).start();
       }
-      changePrevValue(value);
-      // prevValue.setValue(value);
+      setPanValue?.(-value);
     },
-    [prevValue, diffClampScroll, decay, scrollHeight]
+    [diffClampScroll, decay, scrollHeight]
   );
 
   const handlePanStateChange = React.useCallback(
     ({ nativeEvent }: PanGestureHandlerStateChangeEvent) => {
       if (nativeEvent.state === 5) {
-        changePrevValue(0);
-        // prevValue.setValue(0);
-        scroll.setValue(0);
+        flattenOffset();
+      } else if (nativeEvent.state === 2) {
+        pan.stopAnimation((val) => {
+          setOffset(val);
+          setPanValue(0);
+        });
       }
     },
-    [prevValue, scroll]
+    [scroll]
   );
 
   const onContentSizeChange = React.useCallback(
@@ -114,23 +128,21 @@ const PanWrapper: FC<
     [scrollHeight]
   );
 
-  return withScroll ? (
-    <PanGestureHandler
-      onHandlerStateChange={handlePanStateChange}
-      activeOffsetY={[-5, 5]}
-      onGestureEvent={_onPanGestureEvent}
-    >
-      <ScrollView onContentSizeChange={onContentSizeChange} ref={scrollViewRef}>
-        {children}
-      </ScrollView>
-    </PanGestureHandler>
+  return typeof children === "function" ? (
+    children({
+      onGestureEvent: _onPanGestureEvent,
+      onHandlerStateChange: handlePanStateChange,
+      onContentSizeChange,
+      interpolatedValue: interpolatedValue as InterpolatedValueType,
+      activeOffsetY,
+      minHeight,
+      maxHeight,
+      scrollRef,
+    })
   ) : (
-    typeof children === "function" &&
-      children({
-        onGestureEvent: _onPanGestureEvent,
-        onHandlerStateChange: handlePanStateChange,
-        onContentSizeChange,
-      })
+    <View>
+      <Text>You need to implement children as function in PanWrapper</Text>
+    </View>
   );
 };
 
