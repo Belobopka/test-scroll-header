@@ -14,17 +14,20 @@ export type WithInnerValue<Type> = Type & {
 
 export type DiffClampType = WithInnerValue<Animated.AnimatedDiffClamp>;
 export type AnimatedValue = WithInnerValue<Animated.Value>;
+export type InterpolatedValueType = WithInnerValue<
+  Animated.AnimatedInterpolation
+>;
 
 export type ContextValue = {
   interpolatedValue: Animated.AnimatedInterpolation;
   minHeight: number;
   maxHeight: number;
-  headerOffset: Animated.Value;
+  pan: Animated.Value;
   preserveHeader?: boolean;
-  changeOffset: (item: number) => void;
+  setOffset: (value: number) => void;
   diffClampScroll: Animated.AnimatedDiffClamp;
-  prevValue: Animated.Value;
-  changePrevValue: (value: number) => void;
+  flattenOffset: (value?: number) => void;
+  setPanValue: (value: number) => void;
 };
 
 export const TransformContext = React.createContext<ContextValue>({
@@ -32,10 +35,10 @@ export const TransformContext = React.createContext<ContextValue>({
   diffClampScroll: new Animated.Value(0),
   minHeight: 0,
   maxHeight: 250,
-  headerOffset: new Animated.Value(0),
-  changeOffset: () => {},
-  prevValue: new Animated.Value(0),
-  changePrevValue: () => {},
+  pan: new Animated.Value(0),
+  setPanValue: () => {},
+  setOffset: () => {},
+  flattenOffset: () => {},
 });
 
 const TransformProvider: FC<TransformProviderProps> = ({
@@ -43,9 +46,9 @@ const TransformProvider: FC<TransformProviderProps> = ({
   maxHeight,
   minHeight,
 }: TransformProviderProps) => {
-  const [headerOffset] = React.useState(new Animated.Value(0));
+  const [pan] = React.useState(new Animated.Value(0));
   const [diffClampScroll, changeDiffClampScroll] = React.useState(
-    Animated.diffClamp(headerOffset, minHeight, maxHeight)
+    Animated.diffClamp(pan, minHeight, maxHeight)
   );
   const interpolate = React.useMemo(
     () =>
@@ -56,30 +59,27 @@ const TransformProvider: FC<TransformProviderProps> = ({
     [diffClampScroll]
   );
 
-  const [prevValue] = React.useState(new Animated.Value(0));
-
-  const changeOffset = React.useCallback((item) => {
-    Animated.timing(headerOffset, {
-      toValue: item + (headerOffset as AnimatedValue)._value,
-      duration: 0,
-      useNativeDriver: false,
-    }).start();
+  const setPanValue = React.useCallback((value: number) => {
+    pan.setValue(value);
   }, []);
 
-  const changePrevValue = React.useCallback(
-    (value) => prevValue.setValue(value),
-    [prevValue]
-  );
+  const setOffset = React.useCallback((value: number) => {
+    pan.setOffset(value);
+  }, []);
+
+  const flattenOffset = React.useCallback((value?: number) => {
+    pan.flattenOffset();
+  }, []);
 
   const value = {
     interpolatedValue: interpolate,
     diffClampScroll,
     minHeight,
     maxHeight,
-    headerOffset,
-    changeOffset,
-    prevValue,
-    changePrevValue,
+    pan,
+    setOffset,
+    flattenOffset,
+    setPanValue,
   };
   return (
     <TransformContext.Provider value={value}>

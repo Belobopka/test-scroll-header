@@ -12,16 +12,10 @@ import {
 
 import { BottomTabParamList } from "../types";
 
-import {
-  TransformProvider,
-  TransformConsumer,
-  HeaderWrapper,
-  ScrollWrapper,
-} from "../lib";
-import { PanWrapper } from "../lib/Pan";
+import { TransformProvider, TransformConsumer } from "../lib";
+import { PanWrapper } from "../lib";
 import { PanGestureHandler } from "react-native-gesture-handler";
-
-type Partia = Partial<any>;
+import { PanWrapperChildrenProps } from "../lib/PanWrapper";
 
 const HEADER_HEIGHT = 250;
 
@@ -34,30 +28,31 @@ const Header = TransformConsumer(
   ({
     interpolatedValue,
     maxHeight,
-    minHeight,
   }: {
     interpolatedValue: Animated.AnimatedInterpolation;
     maxHeight: number;
-    minHeight: number;
   }) => {
     return (
       <PanWrapper>
-        {({ onGestureEvent, handlePanStateChange }) => (
+        {({
+          onGestureEvent,
+          onHandlerStateChange,
+        }: PanWrapperChildrenProps) => (
           <PanGestureHandler
             onGestureEvent={onGestureEvent}
-            onHandlerStateChange={handlePanStateChange}
+            onHandlerStateChange={onHandlerStateChange}
           >
             <Animated.View
               style={[
                 styles.header,
                 {
+                  top: 0,
+                  backgroundColor: "orange",
                   transform: [
                     {
                       translateY: interpolatedValue,
                     },
                   ],
-                  top: 0,
-                  backgroundColor: "orange",
                 },
               ]}
             >
@@ -115,10 +110,23 @@ const NavTabScreen = (options: any) => <ResponsiveScroll {...options} />;
 const ResponsiveScroll = (props: any) => {
   const data = React.useMemo(() => generateItems(25), []);
   return (
-    <PanWrapper withScroll>
-      <ScrollWrapper>
-        {({ maxHeight, minHeight, interpolatedValue }: any) => {
-          return (
+    <PanWrapper activeOffsetY={[-5, 5]} withScroll>
+      {({
+        onGestureEvent,
+        onHandlerStateChange,
+        maxHeight,
+        minHeight,
+        interpolatedValue,
+        onContentSizeChange,
+        scrollRef,
+        activeOffsetY,
+      }: PanWrapperChildrenProps) => (
+        <PanGestureHandler
+          onGestureEvent={onGestureEvent}
+          onHandlerStateChange={onHandlerStateChange}
+          activeOffsetY={activeOffsetY}
+        >
+          <ScrollView onContentSizeChange={onContentSizeChange} ref={scrollRef}>
             <Animated.View
               style={{
                 minHeight: Dimensions.get("screen").height - maxHeight,
@@ -149,9 +157,9 @@ const ResponsiveScroll = (props: any) => {
                 );
               })}
             </Animated.View>
-          );
-        }}
-      </ScrollWrapper>
+          </ScrollView>
+        </PanGestureHandler>
+      )}
     </PanWrapper>
   );
 };
